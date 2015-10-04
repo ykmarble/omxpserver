@@ -114,8 +114,10 @@ def main():
 
     server = OMXPSever(arg.path)
     frontend_stdin = threading.Thread(target=lambda : stdin_reader(server.command_queue))
+    frontend_stdin.daemon = True
     frontend_stdin.start()
     frontend_pipe = threading.Thread(target=lambda : command_reader(server.command_queue))
+    frontend_pipe.daemon = True
     frontend_pipe.start()
     server.run()
 
@@ -132,7 +134,7 @@ def command_reader(queue):
 
     while True:
         try:
-            buffer = os.read(command_fd)
+            buffer = os.read(command_fd, 4096)
         except OSError as err:
             if err.errno == errno.EAGAIN or err.errno == errno.EWOULDBLOCK:
                 buffer = ''
