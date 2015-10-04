@@ -11,6 +11,7 @@ import time
 import threading
 import curses
 import Queue
+import errno
 
 ROOT_PATH = os.path.dirname(sys.argv[0])
 PLAYLIST_PATH =  os.path.join(ROOT_PATH, 'playlist')
@@ -51,7 +52,18 @@ class OMXPSever(object):
             while self.omxp_process.poll() == None:
                 try:
                     command = self.command_queue.get_nowait()
-                    os.write(self.omxp_pipe, command)
+                    if command == 'status':
+                        print "is_playing: {}".format(self.is_playing)
+                        print "status: {}".format(self.playing_status)
+                        print "media_path: {}".format(self.playing_media_path)
+                    elif command == 'stop':
+                        print 'stop is awesome.'
+                    elif command == 'pause':
+                        print 'pause is awesome.'
+                    elif command == 'play':
+                        print 'play is awesome.'
+                    else:
+                        os.write(self.omxp_pipe, command)
                 except Queue.Empty:
                     pass
                 time.sleep(1)
@@ -100,20 +112,36 @@ def main():
     with open(PID_FILE_PATH, 'w') as f:
         f.write(str(os.getpid()))
 
-    # make fifo for sending message to omxpserver
-    if os.path.exists(COMMAND_PIPE_PATH):
-        os.remove(COMMAND_PIPE_PATH)
-    os.mkfifo(COMMAND_PIPE_PATH)
-    command_fd = os.open(COMMAND_PIPE_PATH, os.O_RDONLY | os.O_NONBLOCK)
     server = OMXPSever(arg.path)
-    frontend = threading.Thread(target=lambda : stdin_reader(server.command_queue))
-    frontend.start()
+    frontend_stdin = threading.Thread(target=lambda : stdin_reader(server.command_queue))
+    frontend_stdin.start()
+    frontend_pipe = threading.Thread(target=lambda : command_reader(server.command_queue))
+    frontend_pipe.start()
     server.run()
 
 def stdin_reader(queue):
     while True:
         queue.put(raw_input())
 
+def command_reader(queue):
+    # make fifo for sending message to omxpserver
+    if os.path.exists(COMMAND_PIPE_PATH):
+        os.remove(COMMAND_PIPE_PATH)
+    os.mkfifo(COMMAND_PIPE_PATH)
+    command_fd = os.open(COMMAND_PIPE_PATH, os.O_RDONLY | os.O_NONBLOCK)
+
+    while True:
+        try:
+            buffer = os.read(command_fd)
+        except OSError as err:
+            if err.errno == errno.EAGAIN or err.errno == errno.EWOULDBLOCK:
+                buffer = ''
+            else:
+                raise
+        if buffer == '':
+            time.sleep(1)
+            continue
+        queue.put(buffer.strip())
 
 if __name__ == '__main__':
     try:
