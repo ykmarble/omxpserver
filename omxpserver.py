@@ -7,12 +7,76 @@ import argparse
 import os
 import sys
 import subprocess
+import time
+import threading
 
 ROOT_PATH = os.path.dirname(sys.argv[0])
 PLAYLIST_PATH =  os.path.join(ROOT_PATH, 'playlist')
 PID_FILE_PATH = os.path.join(ROOT_PATH, 'omxpserver.pid')
+COMMAND_PIPE_PATH = os.path.join(ROOT_PATH, 'omxpserver-pipe')
 OMXP_PATH = '/usr/bin/omxplayer'
 OMXP_OPT = '-o local'
+
+class OMXPSever(object):
+    def __init__(self, playlist_path):
+        self.playlist_path = playlist_path
+        self.is_playing = False
+        self.playing_status = 'pause'
+        self.playing_media_path = ''
+        self.omxp_process = None
+        self.omxp_pipe = None
+
+    def pop_playlist(self):
+        with open(self.playlist_path) as f:
+            playlist = f.readlines()
+        if len(playlist) == 0:
+            return ''
+        media_path = playlist.pop(0).strip()
+        with open(self.playlist_path, 'w') as f:
+            f.write("".join(playlist))
+        return media_path
+
+    def run(self):
+        if self.is_playing:
+            self.stop()
+        while True:
+            next = self.pop_playlist()
+            if next == '':
+                time.sleep(5)
+                continue
+            self.play(next)
+            self.omxp_pass_through()
+
+    def play(self, media_path):
+        if subprocess.call(['pgrep', 'omxplayer']) == 0:
+            print 'omxplayer is already running.'
+            return
+        r, w = os.pipe()
+        self.omxp_process = subprocess.Popen(
+            ['/usr/bin/omxplayer', '-o', 'local', media_path]
+            ,stdin=r)
+        self.omxp_pipe = w
+        self.is_playing = True
+        self.playing_status = 'play'
+        self.playing_media_path = media_path
+        return
+
+    def stop(self):
+        pass
+
+    def pause(self):
+        pass
+
+    def inc_volume(self):
+        pass
+
+    def dec_volume(self):
+        pass
+
+    def omxp_pass_through(self):
+        while self.omxp_process.poll() == None:
+            os.write(self.omxp_pipe, sys.stdin.read())
+
 
 def main():
     parser = argparse.ArgumentParser(description='omxplayer frontend with queue.')
@@ -27,30 +91,24 @@ def main():
     if (os.path.exists(PID_FILE_PATH)):
         print 'omxpserver is already running.'
         return
-    if subprocess.call(['pgrep', 'omxplayer']):
-        print 'omxplayer is already running.'
-        return
 
     with open(PID_FILE_PATH, 'w') as f:
         f.write(str(os.getpid()))
 
-    while True:
-        media_path = ''
-        with open(arg.path, 'r') as f:
-            playlist = f.readlines()
-        if len(playlist) == 0:
-            print 'Bye'
-            return
-        media_path = playlist.pop(0).strip()
-        with open(arg.path, 'w') as f:
-            f.write("".join(playlist))
-
-        p = subprocess.Popen(['/usr/bin/omxplayer', '-o', 'local', media_path])
-        p.wait()
+    # make fifo for sending message to omxpserver
+    if os.path.exists(COMMAND_PIPE_PATH):
+        os.remove(COMMAND_PIPE_PATH)
+    os.mkfifo(COMMAND_PIPE_PATH)
+    command_fd = os.open(COMMAND_PIPE_PATH, os.O_RDONLY | os.O_NONBLOCK)
+    server = OMXPSever(arg.path)
+    server.run()
 
 
 if __name__ == '__main__':
     try:
         main()
     finally:
-        os.remove(PID_FILE_PATH)
+        if os.path.exists(PID_FILE_PATH):
+            os.remove(PID_FILE_PATH)
+        if os.path.exists(COMMAND_PIPE_PATH):
+            os.remove(COMMAND_PIPE_PATH)
