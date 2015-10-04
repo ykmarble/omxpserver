@@ -9,6 +9,8 @@ import sys
 import subprocess
 import time
 import threading
+import curses
+import Queue
 
 ROOT_PATH = os.path.dirname(sys.argv[0])
 PLAYLIST_PATH =  os.path.join(ROOT_PATH, 'playlist')
@@ -25,6 +27,7 @@ class OMXPSever(object):
         self.playing_media_path = ''
         self.omxp_process = None
         self.omxp_pipe = None
+        self.command_queue = Queue.Queue()
 
     def pop_playlist(self):
         with open(self.playlist_path) as f:
@@ -45,7 +48,13 @@ class OMXPSever(object):
                 time.sleep(5)
                 continue
             self.play(next)
-            self.omxp_pass_through()
+            while self.omxp_process.poll() == None:
+                try:
+                    command = self.command_queue.get_nowait()
+                    os.write(self.omxp_pipe, command)
+                except Queue.Empty:
+                    pass
+                time.sleep(1)
 
     def play(self, media_path):
         if subprocess.call(['pgrep', 'omxplayer']) == 0:
@@ -73,10 +82,6 @@ class OMXPSever(object):
     def dec_volume(self):
         pass
 
-    def omxp_pass_through(self):
-        while self.omxp_process.poll() == None:
-            os.write(self.omxp_pipe, sys.stdin.read())
-
 
 def main():
     parser = argparse.ArgumentParser(description='omxplayer frontend with queue.')
@@ -101,7 +106,13 @@ def main():
     os.mkfifo(COMMAND_PIPE_PATH)
     command_fd = os.open(COMMAND_PIPE_PATH, os.O_RDONLY | os.O_NONBLOCK)
     server = OMXPSever(arg.path)
+    frontend = threading.Thread(target=lambda : stdin_reader(server.command_queue))
+    frontend.start()
     server.run()
+
+def stdin_reader(queue):
+    while True:
+        queue.put(raw_input())
 
 
 if __name__ == '__main__':
