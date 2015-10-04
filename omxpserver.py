@@ -23,8 +23,12 @@ def main():
         print '{} is not file.'.format(arg.path)
         return
 
-    # check already omxpserver is running
+    # check already omxpserver or omxp is running
     if (os.path.exists(PID_FILE_PATH)):
+        print 'omxpserver is already running.'
+        return
+    if subprocess.call(['pgrep', 'omxplayer']):
+        print 'omxplayer is already running.'
         return
 
     with open(PID_FILE_PATH, 'w') as f:
