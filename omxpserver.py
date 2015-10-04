@@ -41,7 +41,7 @@ def main():
         if len(playlist) == 0:
             print 'Bye'
             return
-        media_path = playlist.pop().strip()
+        media_path = playlist.pop(0).strip()
         with open(arg.path, 'w') as f:
             f.write("".join(playlist))
 
