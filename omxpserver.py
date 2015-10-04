@@ -23,22 +23,32 @@ OMXP_OPT = '-o local'
 class OMXPSever(object):
     def __init__(self, playlist_path):
         self.playlist_path = playlist_path
+        self.playlist = []
         self.is_playing = False
         self.playing_status = 'pause'
         self.playing_media_path = ''
         self.omxp_process = None
         self.omxp_pipe = None
         self.command_queue = Queue.Queue()
+        self.consume_list = True
 
     def pop_playlist(self):
-        with open(self.playlist_path) as f:
-            playlist = f.readlines()
-        if len(playlist) == 0:
+        if self.consume_list:
+            with open(self.playlist_path) as f:
+                playlist = f.readlines()
+            if len(playlist) == 0:
+                return ''
+            media_path = playlist.pop(0).strip()
+            with open(self.playlist_path, 'w') as f:
+                f.write("".join(playlist))
+            return media_path
+        if len(self.playlist) == 0:
             return ''
-        media_path = playlist.pop(0).strip()
-        with open(self.playlist_path, 'w') as f:
-            f.write("".join(playlist))
-        return media_path
+        return self.playlist.pop(0)
+
+    def set_playlist(self):
+        with open(self.playlist_path) as f:
+            self.playlist = [l.strip() for l in f.readlines()]
 
     def run(self):
         if self.is_playing:
@@ -97,11 +107,18 @@ class OMXPSever(object):
 
 def main():
     parser = argparse.ArgumentParser(description='omxplayer frontend with queue.')
-    parser.add_argument('-p', '--path', default=PLAYLIST_PATH)
+    parser.add_argument('-p', '--playlist')
+    parser.add_argument('-q', '--queue', default=PLAYLIST_PATH)
     parser.add_argument('-v', '--verbose', action='store_true')
     arg = parser.parse_args()
-    if  (os.path.exists(arg.path) and not os.path.isfile(arg.path)):
-        print '{} is not file.'.format(arg.path)
+    if arg.queue != PLAYLIST_PATH and arg.playlist != None:
+        print "Don't specify playlist and queue both."
+        return
+    if arg.playlist != None and not os.path.isfile(arg.playlist):
+        print '{} is not file.'.format(arg.playlist)
+        return
+    elif  (os.path.exists(arg.queue) and not os.path.isfile(arg.queue)):
+        print '{} is not file.'.format(arg.queue)
         return
 
     # check already omxpserver or omxp is running
@@ -112,7 +129,12 @@ def main():
     with open(PID_FILE_PATH, 'w') as f:
         f.write(str(os.getpid()))
 
-    server = OMXPSever(arg.path)
+    if arg.playlist != None:
+        server = OMXPSever(arg.playlist)
+        server.consume_list = False
+        server.set_playlist()
+    else:
+        server = OMXPSever(arg.queue)
     frontend_stdin = threading.Thread(target=lambda : stdin_reader(server.command_queue))
     frontend_stdin.daemon = True
     frontend_stdin.start()
