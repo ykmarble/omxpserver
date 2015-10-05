@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from core.omxpserver import OMXPSever
+from core.omxpsocket import OMXPSocket
 import argparse
 import os
 import sys
@@ -46,6 +47,9 @@ def main():
         server.set_playlist()
     else:
         server = OMXPSever(arg.queue)
+    cmd_queue = OMXPSocket()
+    cmd_queue.run()
+
     frontend_stdin = threading.Thread(target=lambda: stdin_reader(server.command_queue))
     frontend_stdin.daemon = True
     frontend_stdin.start()
