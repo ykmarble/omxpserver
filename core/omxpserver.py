@@ -5,6 +5,7 @@ import subprocess
 import os
 import time
 import Queue
+from utils import send_chunked_stream
 
 
 class OMXPSever(object):
@@ -48,19 +49,29 @@ class OMXPSever(object):
             self.play(next)
             while self.omxp_process.poll() == None:
                 try:
-                    command = self.command_queue.get_nowait()
+                    socket, data = self.command_queue.get_nowait()
+                    command = data["command"]
+                    args = data["args"]
+                    res = ""
                     if command == 'status':
-                        print "is_playing: {}".format(self.is_playing)
-                        print "status: {}".format(self.playing_status)
-                        print "media_path: {}".format(self.playing_media_path)
+                        res = "is_playing: {}\n".format(self.is_playing) \
+                            + "status: {}\n".format(self.playing_status) \
+                            + "media_path: {}".format(self.playing_media_path)
                     elif command == 'stop':
-                        print 'stop is awesome.'
+                        res = 'stop is awesome.'
                     elif command == 'pause':
-                        print 'pause is awesome.'
+                        res = 'pause is awesome.'
                     elif command == 'play':
-                        print 'play is awesome.'
+                        res = 'play is awesome.'
+                    elif command == 'omx':
+                        os.write(self.omxp_pipe, " ".join(args))
                     else:
                         os.write(self.omxp_pipe, command)
+                    if socket == None:
+                        print res
+                    else:
+                        send_chunked_stream(socket, res)
+                        socket.close()
                 except Queue.Empty:
                     pass
                 time.sleep(1)

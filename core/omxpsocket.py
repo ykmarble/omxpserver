@@ -5,6 +5,8 @@ import socket
 import threading
 import json
 import Queue
+import os
+from utils import recieve_chunked_stream, send_chunked_stream
 
 SOCKET_PATH = "/tmp/omxplayer.sock"
 
@@ -13,7 +15,9 @@ class OMXPSocket(object):
         self.socket_path = path
         self.queue = Queue.Queue()
 
-    def run(self):
+    def start(self):
+        if os.path.exists(self.socket_path):
+            os.unlink(self.socket_path)
         self.socket = socket.socket(socket.AF_UNIX)
         self.socket.bind(self.socket_path)
         self.socket.listen(1)
@@ -21,17 +25,24 @@ class OMXPSocket(object):
         def _run():
             while True:
                 csock, addr = self.socket.accept()
-                rawdata = csock.recv(4096)
+                try:
+                    rawdata = recieve_chunked_stream(csock)
+                except utils.CommunicationError as e:
+                    print e
+                    continue
                 data = None
                 try:
                     data = json.loads(rawdata)
                 except ValueError:
+                    csock.close()
                     continue
-                if not (data.haskey("command") and data.haskey("args")):
+                if not (data.has_key("command") and data.has_key("args")):
+                    csock.close()
                     continue
-                self.queue.put(data)
+                self.queue.put((csock, data))
 
         t = threading.Thread(target=_run)
+        t.daemon = True
         t.start()
 
     def pop_data(self):
@@ -39,3 +50,7 @@ class OMXPSocket(object):
             return self.queue.get_nowait()
         except Queue.Empty:
             return None
+
+    def send_response(self, socket, data):
+        data_json = json.dumps(data)
+        send_chunked_stream(socket, data_json)
