@@ -11,7 +11,6 @@ import threading
 import subprocess
 
 ROOT_PATH = os.path.dirname(sys.argv[0])
-PLAYLIST_PATH = os.path.join(ROOT_PATH, 'queue')
 PID_FILE_PATH = os.path.join(ROOT_PATH, 'omxpserver.pid')
 OMXP_PATH = '/usr/bin/omxplayer'
 OMXP_OPT = '-o local'
@@ -19,19 +18,8 @@ OMXP_OPT = '-o local'
 def main():
     # parse argument
     parser = argparse.ArgumentParser(description='omxplayer frontend with queue.')
-    parser.add_argument('-p', '--playlist')
-    parser.add_argument('-q', '--queue', default=PLAYLIST_PATH)
     parser.add_argument('-v', '--verbose', action='store_true')
     arg = parser.parse_args()
-    if arg.queue != PLAYLIST_PATH and arg.playlist != None:
-        print "Don't specify playlist and queue both."
-        return
-    if arg.playlist != None and not os.path.isfile(arg.playlist):
-        print '{} is not file.'.format(arg.playlist)
-        return
-    elif os.path.exists(arg.queue) and not os.path.isfile(arg.queue):
-        print '{} is not file.'.format(arg.queue)
-        return
 
     # check already omxpserver or omxp is running
     if (os.path.exists(PID_FILE_PATH) and
@@ -43,27 +31,17 @@ def main():
     with open(PID_FILE_PATH, 'w') as f:
         f.write(str(os.getpid()) + "\n")
 
-    # setting play mode
-    if arg.playlist != None:
-        server = OMXPSever(arg.playlist)
-        server.consume_list = False
-        server.set_playlist()
-    else:
-        if arg.queue == PLAYLIST_PATH and not os.path.exists(arg.queue):
-            with open(arg.queue, 'w'):
-                pass
-        server = OMXPSever(arg.queue)
+    server = OMXPSever()
 
     # open socket to recieve command
     cmd_socket = OMXPSocket()
     cmd_socket.start()
     def socket_pipe():
         while True:
-            data = cmd_socket.pop_data()
+            sock, data = cmd_socket.pop_data()
             if data == None:
                 continue
-            server.command_queue.put(data)
-            time.sleep(1)
+            server.push_command(sock, data)
 
     socket_thread = threading.Thread(target=socket_pipe)
     socket_thread.daemon = True
