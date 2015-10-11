@@ -22,6 +22,8 @@ def recieve_chunked_stream(socket):
     return res
 
 def send_chunked_stream(socket, data):
+    if isinstance(data, unicode):
+        data = data.encode('utf-8', 'ignore')
     length = len(data)
     socket.send(str(length))
     socket.send('\0')
