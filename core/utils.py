@@ -22,8 +22,6 @@ def recieve_chunked_stream(socket):
     return res
 
 def send_chunked_stream(socket, data):
-    if not isinstance(data, str):
-        raise TypeError("Expect type str but {} is passed.".format(type(data)))
     length = len(data)
     socket.send(str(length))
     socket.send('\0')

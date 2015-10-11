@@ -22,23 +22,26 @@ class OMXPSever(object):
 
     def pop_playlist(self):
         '''Pop next media path.'''
-        if len(self.play_queue) == 0:
-            return None
         return self.play_queue.pop(0)
 
-    def set_playlist(self, playlist_path):
-        '''Set playlist.'''
+    def add_playlist(self, playlist_path):
+        '''Add medias in playlist.'''
         with open(playlist_path) as f:
-            self.play_queue = [l.strip() for l in f.readlines()]
+            self.play_queue += [l.strip() for l in f.readlines()]
+
+    def add_media(self, media_path):
+        '''Add media'''
+        self.play_queue.append(media_path)
 
     def is_playing(self):
         '''Check already running omxplayer.'''
-        return (self.omxp_process and
+        return (self.omxp_process != None and
                 self.omxp_process.poll() == None)
 
     def pop_command(self):
         '''Pop command from command_queue with tuple.
            Return None if new available data is nothing.'''
+        sock = None
         data = None
         try:
             sock, data = self.command_queue.get_nowait()
@@ -52,13 +55,16 @@ class OMXPSever(object):
     def run(self):
         '''Start server.'''
         while True:
-            if not self.is_playing and len(self.play_queue) != 0:
-                self.play(self.pop_playlist)
+            if not self.is_playing() and len(self.play_queue) != 0:
+                self.play(self.pop_playlist())
             sock, data = self.pop_command()
+            if data == None:
+                time.sleep(1)
+                continue
             command = data['command']
             res = ""
             if command == 'status':
-                res = "is_playing: {}\n".format(self.is_playing) \
+                res = "is_playing: {}\n".format(self.is_playing()) \
                     + "status: {}\n".format(self.playing_status) \
                     + "media_path: {}".format(self.playing_media_path)
             elif command == 'stop':
@@ -69,6 +75,26 @@ class OMXPSever(object):
                 res = 'pause is awesome.'
             elif command == 'omx':
                 os.write(self.omxp_pipe, " ".join(data["args"]))
+            elif command == 'add_media':
+                res = ''
+                for p in data['path']:
+                    self.add_media(p)
+                res = 'Add media:\n'
+                res += "\n".join(self.play_queue)
+            elif command == 'add_playlist':
+                for p in data['path']:
+                    self.add_playlist(p)
+                res = 'Add media:\n'
+                res += "\n".join(self.play_queue)
+            elif command == 'list_queue':
+                res = "\n".join(self.play_queue)
+            elif command == 'quit':
+                res = 'See you'
+                if sock == None:
+                    print res
+                else:
+                    send_chunked_stream(sock, res)
+                exit()
             else:
                 os.write(self.omxp_pipe, command)
             if sock == None:
@@ -79,7 +105,6 @@ class OMXPSever(object):
                 except socket.error:
                     continue
                 sock.close()
-            time.sleep(1)
 
     def play(self, media_path):
         '''Play media with omxplayer.'''
