@@ -11,11 +11,14 @@ from utils import recieve_chunked_stream, send_chunked_stream
 SOCKET_PATH = "/tmp/omxplayer.sock"
 
 class OMXPSocket(object):
+    '''Socket wrapper to recieve command from other processes.'''
+
     def __init__(self, path=SOCKET_PATH):
         self.socket_path = path
         self.queue = Queue.Queue()
 
     def start(self):
+        '''Start reciever thread.'''
         if os.path.exists(self.socket_path):
             os.unlink(self.socket_path)
         self.socket = socket.socket(socket.AF_UNIX)
@@ -46,11 +49,13 @@ class OMXPSocket(object):
         t.start()
 
     def pop_data(self):
+        '''Pop command data. Return None if new arrival data is nothing'''
         try:
             return self.queue.get_nowait()
         except Queue.Empty:
             return None
 
     def send_response(self, socket, data):
+        '''Send response.'''
         data_json = json.dumps(data)
         send_chunked_stream(socket, data_json)

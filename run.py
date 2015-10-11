@@ -11,12 +11,13 @@ import threading
 import subprocess
 
 ROOT_PATH = os.path.dirname(sys.argv[0])
-PLAYLIST_PATH = os.path.join(ROOT_PATH, 'playlist')
+PLAYLIST_PATH = os.path.join(ROOT_PATH, 'queue')
 PID_FILE_PATH = os.path.join(ROOT_PATH, 'omxpserver.pid')
 OMXP_PATH = '/usr/bin/omxplayer'
 OMXP_OPT = '-o local'
 
 def main():
+    # parse argument
     parser = argparse.ArgumentParser(description='omxplayer frontend with queue.')
     parser.add_argument('-p', '--playlist')
     parser.add_argument('-q', '--queue', default=PLAYLIST_PATH)
@@ -38,9 +39,11 @@ def main():
         print 'omxpserver is already running.'
         return
 
+    # make PID file
     with open(PID_FILE_PATH, 'w') as f:
         f.write(str(os.getpid()) + "\n")
 
+    # setting play mode
     if arg.playlist != None:
         server = OMXPSever(arg.playlist)
         server.consume_list = False
@@ -51,9 +54,9 @@ def main():
                 pass
         server = OMXPSever(arg.queue)
 
+    # open socket to recieve command
     cmd_socket = OMXPSocket()
     cmd_socket.start()
-
     def socket_pipe():
         while True:
             data = cmd_socket.pop_data()

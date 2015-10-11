@@ -5,10 +5,13 @@ import subprocess
 import os
 import time
 import Queue
+import socket
 from utils import send_chunked_stream
 
 
 class OMXPSever(object):
+    '''omxplayer with play queue.'''
+
     def __init__(self, playlist_path):
         self.playlist_path = playlist_path
         self.playlist = []
@@ -21,6 +24,7 @@ class OMXPSever(object):
         self.consume_list = True
 
     def pop_playlist(self):
+        '''Pop next media path.'''
         if self.consume_list:
             with open(self.playlist_path) as f:
                 playlist = f.readlines()
@@ -35,10 +39,12 @@ class OMXPSever(object):
         return self.playlist.pop(0)
 
     def set_playlist(self):
+        '''Set playlist from self.media_path'''
         with open(self.playlist_path) as f:
             self.playlist = [l.strip() for l in f.readlines()]
 
     def run(self):
+        '''Start server.'''
         if self.is_playing:
             self.stop()
         while True:
@@ -49,7 +55,7 @@ class OMXPSever(object):
             self.play(next)
             while self.omxp_process.poll() == None:
                 try:
-                    socket, data = self.command_queue.get_nowait()
+                    sock, data = self.command_queue.get_nowait()
                     command = data["command"]
                     args = data["args"]
                     res = ""
@@ -67,19 +73,20 @@ class OMXPSever(object):
                         os.write(self.omxp_pipe, " ".join(args))
                     else:
                         os.write(self.omxp_pipe, command)
-                    if socket == None:
+                    if sock == None:
                         print res
                     else:
-                        send_chunked_stream(socket, res)
-                        socket.close()
+                        try:
+                            send_chunked_stream(sock, res)
+                        except socket.error:
+                            continue
+                        sock.close()
                 except Queue.Empty:
                     pass
                 time.sleep(1)
 
     def play(self, media_path):
-        if subprocess.call(['pgrep', 'omxplayer']) == 0:
-            print 'omxplayer is already running.'
-            return
+        '''Play media with omxplayer.'''
         r, w = os.pipe()
         self.omxp_process = subprocess.Popen(
             ['/usr/bin/omxplayer', '-o', 'local', media_path]
@@ -91,13 +98,17 @@ class OMXPSever(object):
         return
 
     def stop(self):
+        '''Kill omxplayer.'''
         pass
 
     def pause(self):
+        '''Stop omxplayer, but omxplayer process will continue running.'''
         pass
 
-    def inc_volume(self):
+    def inc_volume(self, val=1):
+        '''Increase volume.'''
         pass
 
-    def dec_volume(self):
+    def dec_volume(self, val=1):
+        '''Decrease volume'''
         pass
