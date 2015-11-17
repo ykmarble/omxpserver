@@ -4,7 +4,6 @@
 import socket
 import threading
 import json
-import Queue
 import os
 from utils import recieve_chunked_stream, send_chunked_stream
 from utils import CommunicationError
@@ -14,9 +13,9 @@ SOCKET_PATH = "/tmp/omxplayer.sock"
 class OMXPSocket(object):
     '''Socket wrapper to recieve command from other processes.'''
 
-    def __init__(self, path=SOCKET_PATH):
+    def __init__(self, command_listener, path=SOCKET_PATH):
         self.socket_path = path
-        self.queue = Queue.Queue()
+        self.command_listener = command_listener
 
     def start(self):
         '''Start reciever thread.'''
@@ -45,15 +44,8 @@ class OMXPSocket(object):
                         send_chunked_stream(csock, d)
                     except socket.error:
                         pass
-                self.queue.put((send_res, data))
+                self.command_listener(send_res, data)
 
         t = threading.Thread(target=_run)
         t.daemon = True
         t.start()
-
-    def pop_data(self):
-        '''Pop command data. Return None if new arrival data is nothing'''
-        try:
-            return self.queue.get()
-        except Queue.Empty:
-            return None

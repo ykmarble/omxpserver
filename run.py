@@ -34,30 +34,8 @@ def main():
     server = OMXPSever()
 
     # open socket to recieve command
-    cmd_socket = OMXPSocket()
+    cmd_socket = OMXPSocket(server.consume_command)
     cmd_socket.start()
-    def socket_pipe():
-        while True:
-            send_res, data = cmd_socket.pop_data()
-            server.push_command(send_res, data)
-
-    socket_thread = threading.Thread(target=socket_pipe)
-    socket_thread.daemon = True
-    socket_thread.start()
-
-    def stdin_reader():
-        while True:
-            full_arg = raw_input(">").split()
-            data = {}
-            data["command"] = full_arg[0]
-            data["args"] = full_arg[1:]
-            def printer(s):
-                print s
-            server.command_queue.put((printer, data))
-
-    stdin_thread = threading.Thread(target=stdin_reader)
-    stdin_thread.daemon = True
-    stdin_thread.start()
 
     server.run()
 
