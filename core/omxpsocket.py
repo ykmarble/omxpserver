@@ -40,7 +40,12 @@ class OMXPSocket(object):
                 except ValueError:
                     csock.close()
                     continue
-                self.queue.put((csock, data))
+                def send_res(d):
+                    try:
+                        send_chunked_stream(csock, d)
+                    except socket.error:
+                        pass
+                self.queue.put((send_res, data))
 
         t = threading.Thread(target=_run)
         t.daemon = True

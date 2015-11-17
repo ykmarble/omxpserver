@@ -57,7 +57,7 @@ class OMXPSever(object):
         while True:
             if not self.is_playing() and len(self.play_queue) != 0:
                 self.play(self.pop_playlist())
-            sock, data = self.pop_command()
+            send_res, data = self.pop_command()
             if data == None:
                 time.sleep(1)
                 continue
@@ -89,22 +89,11 @@ class OMXPSever(object):
             elif command == 'list_queue':
                 res = "\n".join(self.play_queue)
             elif command == 'quit':
-                res = 'See you'
-                if sock == None:
-                    print res
-                else:
-                    send_chunked_stream(sock, res)
+                send_res('See you')
                 exit()
             else:
                 os.write(self.omxp_pipe, command)
-            if sock == None:
-                print res
-            else:
-                try:
-                    send_chunked_stream(sock, res)
-                except socket.error:
-                    continue
-                sock.close()
+            send_res(res)
 
     def play(self, media_path):
         '''Play media with omxplayer.'''

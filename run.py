@@ -38,10 +38,8 @@ def main():
     cmd_socket.start()
     def socket_pipe():
         while True:
-            sock, data = cmd_socket.pop_data()
-            if data == None:
-                continue
-            server.push_command(sock, data)
+            send_res, data = cmd_socket.pop_data()
+            server.push_command(send_res, data)
 
     socket_thread = threading.Thread(target=socket_pipe)
     socket_thread.daemon = True
@@ -53,7 +51,9 @@ def main():
             data = {}
             data["command"] = full_arg[0]
             data["args"] = full_arg[1:]
-            server.command_queue.put((None, data))
+            def printer(s):
+                print s
+            server.command_queue.put((printer, data))
 
     stdin_thread = threading.Thread(target=stdin_reader)
     stdin_thread.daemon = True
