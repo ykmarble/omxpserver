@@ -62,30 +62,31 @@ class OMXPSever(object):
                 time.sleep(1)
                 continue
             command = data['command']
-            res = ""
+            res = "is_playing: {}\n".format(self.is_playing()) \
+                + "status: {}\n".format(self.playing_status) \
+                + "media_path: {}".format(self.playing_media_path)
             if command == 'status':
-                res = "is_playing: {}\n".format(self.is_playing()) \
-                    + "status: {}\n".format(self.playing_status) \
-                    + "media_path: {}".format(self.playing_media_path)
+                pass
             elif command == 'stop':
                 self.stop()
-                res = 'stop is awesome.'
             elif command == 'pause':
                 self.pause()
-                res = 'pause is awesome.'
             elif command == 'omx':
                 os.write(self.omxp_pipe, " ".join(data["args"]))
             elif command == 'add_media':
-                res = ''
-                for p in data['path']:
+                valid_paths = [i for i in data['path'] if os.path.isfile(i)]
+                for p in valid_paths:
                     self.add_media(p)
+                res = ''
                 res = 'Add media:\n'
-                res += "\n".join(self.play_queue)
+                res += "\n".join(valid_paths)
             elif command == 'add_playlist':
-                for p in data['path']:
+                valid_paths = [i for i in data['path'] if os.path.isfile(i)]
+                for p in valid_paths:
                     self.add_playlist(p)
+                res = ''
                 res = 'Add media:\n'
-                res += "\n".join(self.play_queue)
+                res += "\n".join(valid_paths)
             elif command == 'list_queue':
                 res = "\n".join(self.play_queue)
             elif command == 'quit':
