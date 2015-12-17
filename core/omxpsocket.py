@@ -27,24 +27,28 @@ class OMXPSocket(object):
 
         def _run():
             while True:
-                csock, addr = self.socket.accept()
                 try:
-                    rawdata = recieve_chunked_stream(csock)
-                except CommunicationError as e:
+                    csock, addr = self.socket.accept()
+                    try:
+                        rawdata = recieve_chunked_stream(csock)
+                    except CommunicationError as e:
+                        print e
+                        continue
+                    data = None
+                    try:
+                        data = json.loads(rawdata)
+                    except ValueError:
+                        csock.close()
+                        continue
+                    def send_res(d):
+                        try:
+                            send_chunked_stream(csock, d)
+                        except socket.error:
+                            pass
+                    self.command_listener(send_res, data)
+                except Exception as e:
                     print e
                     continue
-                data = None
-                try:
-                    data = json.loads(rawdata)
-                except ValueError:
-                    csock.close()
-                    continue
-                def send_res(d):
-                    try:
-                        send_chunked_stream(csock, d)
-                    except socket.error:
-                        pass
-                self.command_listener(send_res, data)
 
         t = threading.Thread(target=_run)
         t.daemon = True

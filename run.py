@@ -32,10 +32,12 @@ def main():
         f.write(str(os.getpid()) + "\n")
 
     server = OMXPSever()
+    server.destructer = lambda : os.remove(PID_FILE_PATH)
 
     # open socket to recieve command
     cmd_socket = OMXPSocket(server.consume_command)
     cmd_socket.start()
+    cmd_socket.daemon = True
 
     server.run()
 

@@ -6,62 +6,54 @@ import os
 import time
 import Queue
 import socket
+import sys
+import threading
 from utils import send_chunked_stream
-
 
 class OMXPSever(object):
     '''omxplayer with play queue.'''
 
     def __init__(self):
         self.play_queue = []
-        self.playing_status = 'pause'
+        self.playing_status = 'play'
         self.playing_media_path = ''
         self.omxp_process = None
         self.omxp_pipe = None
-        self.command_queue = Queue.Queue()
+        self.destructer = lambda : None
+        self.updating = threading.RLock()
+        self.wake_run = threading.Event()
 
     def pop_playlist(self):
         '''Pop next media path.'''
-        return self.play_queue.pop(0)
+        with self.updating:
+            return self.play_queue.pop(0)
 
     def add_playlist(self, playlist_path):
         '''Add medias in playlist.'''
         media_paths = []
         with open(playlist_path) as f:
             media_paths += [l.strip() for l in f.readlines()]
-        self.play_queue.extend(media_paths)
+        with self.updating:
+            self.play_queue.extend(media_paths)
         return media_paths
 
     def add_media(self, media_path):
         '''Add media'''
-        self.play_queue.append(media_path)
+        with self.updating:
+            self.play_queue.append(media_path)
 
     def is_playing(self):
         '''Check already running omxplayer.'''
         return (self.omxp_process != None and
                 self.omxp_process.poll() == None)
 
-    def pop_command(self):
-        '''Pop command from command_queue with tuple.
-           Return None if new available data is nothing.'''
-        sock = None
-        data = None
-        try:
-            sock, data = self.command_queue.get_nowait()
-        except Queue.Empty:
-            pass
-        return sock, data
-
-    def push_command(self, sock, data):
-        self.command_queue.put((sock, data))
-
     def consume_command(self, send_res, data):
         command = data['command']
-        res = "is_playing: {}\n".format(self.is_playing()) \
-            + "status: {}\n".format(self.playing_status) \
-            + "media_path: {}".format(self.playing_media_path)
+        res = ''
         if command == 'status':
             pass
+        elif command == 'play':
+            self.play()
         elif command == 'stop':
             self.stop()
         elif command == 'pause':
@@ -86,43 +78,75 @@ class OMXPSever(object):
             res = 'Add media:\n'
             res += "\n".join(add_medium)
         elif command == 'list_queue':
-            res = "\n".join(self.play_queue)
+            with self.updating:
+                res = "\n".join(self.play_queue)
         elif command == 'quit':
             send_res('See you')
-            exit()
+            self.stop()
+            self.destructer()
         else:
             os.write(self.omxp_pipe, command)
+        if res == '':
+            with self.updating:
+                res = "is_playing: {}\n".format(self.is_playing()) \
+                    + "status: {}\n".format(self.playing_status) \
+                    + "media_path: {}".format(self.playing_media_path)
         send_res(res)
+        self.wake_run.set()
 
     def run(self):
         '''Start server.'''
-        while True:
-            if not self.is_playing() and len(self.play_queue) != 0:
-                self.play(self.pop_playlist())
+        while self.wake_run.wait():
+            self.updating.acquire()
+            if self.is_playing():
+                self.updating.release()
+            elif len(self.play_queue) != 0 and self.playing_status != 'stop':
+                p = self.pop_playlist()
+                self.updating.release()
+                self.play(p)
+            else:
+                self.updating.release()
 
-    def play(self, media_path):
+    def play(self, media_path=None):
         '''Play media with omxplayer.'''
-        r, w = os.pipe()
-        self.omxp_process = subprocess.Popen(
-            ['/usr/bin/omxplayer', '-o', 'local', media_path]
-            , stdin=r)
-        self.omxp_pipe = w
-        self.playing_status = 'play'
-        self.playing_media_path = media_path
-        return
+        if media_path == None:
+            with self.updating:
+                if self.playing_status == 'pause':
+                    self.pause()
+                else:
+                    self.playing_status = 'play'
+            return
+        with self.updating:
+            r, w = os.pipe()
+            self.omxp_process = subprocess.Popen(
+                ['/usr/bin/omxplayer', '-o', 'local', media_path]
+                , stdin=r)
+            self.omxp_pipe = w
+            def watch():
+                self.omxp_process.wait()
+                self.wake_run.set()
+            t = threading.Thread(target=watch)
+            t.daemon = True
+            self.playing_status = 'play'
+            self.playing_media_path = media_path
 
     def stop(self):
         '''Kill omxplayer.'''
-        pass
+        with self.updating:
+            if self.is_playing():
+                os.write(self.omxp_pipe, "q")
+            self.playing_status = 'stop'
+            self.playing_media_path = ''
+            self.omxp_process = None
+            self.omxp_pipe = None
 
     def pause(self):
         '''Stop omxplayer, but omxplayer process will continue running.'''
-        pass
-
-    def inc_volume(self, val=1):
-        '''Increase volume.'''
-        pass
-
-    def dec_volume(self, val=1):
-        '''Decrease volume'''
-        pass
+        with self.updating:
+            if not self.is_playing():
+                return
+            os.write(self.omxp_pipe, " ")
+            if self.playing_status == 'play':
+                self.playing_status = 'pause'
+            else:
+                self.playing_status == 'play'

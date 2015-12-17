@@ -15,6 +15,9 @@ cmd_dict = {"status": lambda args: len(args)==0,
             "add_media": lambda args: True,
             "add_playlist": lambda args: True,
             "list_queue": lambda args: True,
+            "play": lambda args: True,
+            "stop": lambda args: True,
+            "pause": lambda args: True,
             "quit": lambda args: True}
 cmd_description = \
 """
@@ -64,8 +67,6 @@ def main():
                 data['path'].append(a)
             else:
                 data["path"].append(os.path.join(os.getcwd(), a))
-    elif args.cmd == 'list_queue':
-        pass
     print send_cmd(args.socketpath, data)
 
 if __name__ == '__main__':
