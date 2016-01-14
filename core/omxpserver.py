@@ -3,12 +3,8 @@
 
 import subprocess
 import os
-import time
-import Queue
-import socket
-import sys
 import threading
-from utils import send_chunked_stream
+
 
 class OMXPSever(object):
     '''omxplayer with play queue.'''
@@ -109,7 +105,7 @@ class OMXPSever(object):
 
     def play(self, media_path=None):
         '''Play media with omxplayer.'''
-        if media_path == None:
+        if media_path is None:
             with self.updating:
                 if self.playing_status == 'pause':
                     self.pause()
@@ -124,6 +120,8 @@ class OMXPSever(object):
             self.omxp_pipe = w
             def watch():
                 self.omxp_process.wait()
+                os.close(r)
+                os.close(w)
                 self.wake_run.set()
             t = threading.Thread(target=watch)
             t.daemon = True
