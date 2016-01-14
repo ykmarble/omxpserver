@@ -10,6 +10,7 @@ from utils import CommunicationError
 
 SOCKET_PATH = "/tmp/omxplayer.sock"
 
+
 class OMXPSocket(object):
     '''Socket wrapper to recieve command from other processes.'''
 
@@ -25,31 +26,34 @@ class OMXPSocket(object):
         self.socket.bind(self.socket_path)
         self.socket.listen(1)
 
-        def _run():
-            while True:
-                try:
-                    csock, addr = self.socket.accept()
-                    try:
-                        rawdata = recieve_chunked_stream(csock)
-                    except CommunicationError as e:
-                        print e
-                        continue
-                    data = None
-                    try:
-                        data = json.loads(rawdata)
-                    except ValueError:
-                        csock.close()
-                        continue
-                    def send_res(d):
-                        try:
-                            send_chunked_stream(csock, d)
-                        except socket.error:
-                            pass
-                    self.command_listener(send_res, data)
-                except Exception as e:
-                    print e
-                    continue
 
-        t = threading.Thread(target=_run)
+        t = threading.Thread(target=self.mainloop)
         t.daemon = True
         t.start()
+
+    def mainloop(self):
+        while True:
+            csock, addr = self.socket.accept()
+            try:
+                rawdata = recieve_chunked_stream(csock)
+            except CommunicationError as e:
+                send_chunked_stream(csock, str(e))
+                csock.close()
+                continue
+            data = None
+            try:
+                data = json.loads(rawdata)
+            except ValueError:
+                print "Reciebed invalied data."
+                send_chunked_stream(csock, "Reciebed invalied data.")
+                csock.close()
+                continue
+            try:
+                self.command_listener(
+                    lambda d: send_chunked_stream(csock, d),
+                    data)
+            except Exception as e:
+                print e
+                send_chunked_stream(csock, str(e))
+                csock.close()
+                continue
