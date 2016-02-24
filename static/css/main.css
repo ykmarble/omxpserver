@@ -23,6 +23,10 @@ hr {
     padding: 0;
 }
 
+li {
+    list-style-type: none
+}
+
 audio,
 canvas,
 iframe,

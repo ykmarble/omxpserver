@@ -61,7 +61,8 @@ def show_content(dirpath=""):
             dirlist.append({"href": "/contents"+item_fake_path, "caption": item})
         elif is_valid_media(item_real_path):
             itemlist.append({"href": item_fake_path, "caption": item})
-    return render_template("base.html", itemlist=itemlist, dirlist=dirlist)
+    return render_template("base.html", title=fake_path,
+                           itemlist=itemlist, dirlist=dirlist)
 
 
 @app.route("/queue/list")
