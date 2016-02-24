@@ -15,27 +15,54 @@ app = Flask(__name__)
 pjoin = os.path.join
 
 
-def validate_path(path, root=MEDIA_ROOT):
+def is_valid_path(fake_path, root=MEDIA_ROOT):
     """
     Check taken path is valid or not.
     """
-    return path
+    norm_path = os.path.normpath(fake_path)
+    return norm_path.startswith("/")
 
+
+def build_real_path(fake_path, root=MEDIA_ROOT):
+    """
+    Convert fake_path to real path.
+    fake_path means path of fake root, or virtual contents tree.
+    real path means actualy to be passed to filesystem.
+    """
+    return os.path.join(root, fake_path[1:])
+
+
+def is_valid_media(real_path):
+    """
+    Check the file indecated by path is supported or not.
+    """
+    exts = ["mp3", "wav", "aac", "m4a", "m2ts", "ts", "mp4"]
+    return real_path.split(".")[-1] in exts
 
 
 @app.route("/contents/")
 @app.route("/contents/<path:dirpath>/")
 def show_content(dirpath=""):
-    valid_path = validate_path(dirpath)
-    if valid_path is None:
+    """
+    Endpoint that displays contents tree.
+    dirpath will be only used in contents tree.
+    """
+    fake_path = "/" + dirpath
+    if not is_valid_path(fake_path):
         return "Invalid Parameter."
-    real_path = pjoin(MEDIA_ROOT, valid_path)
-    dirs = os.listdir(real_path)
-    itemlist = [{"href": pjoin("/", dirpath, item), "caption": item}
-                for item in dirs if os.path.isfile(pjoin(real_path, item))]
-    dirlist = [{"href": pjoin("/contents", dirpath, item), "caption": item}
-               for item in dirs if os.path.isdir(pjoin(real_path, item))]
+    real_path = build_real_path(fake_path)
+    dirs = ["../"] + os.listdir(real_path)
+    itemlist = []
+    dirlist = []
+    for item in dirs:
+        item_fake_path = pjoin(fake_path, item)
+        item_real_path = build_real_path(item_fake_path)
+        if os.path.isdir(item_real_path):
+            dirlist.append({"href": "/contents"+item_fake_path, "caption": item})
+        elif is_valid_media(item_real_path):
+            itemlist.append({"href": item_fake_path, "caption": item})
     return render_template("base.html", itemlist=itemlist, dirlist=dirlist)
+
 
 @app.route("/queue/list")
 def list_queue():
@@ -57,12 +84,10 @@ def enqueue():
         # TODO: Implement function handling error messages.
         return "Invalid Parameter."
     path = request.form["path"]
-    valid_path = validate_path(path)
-    if valid_path is None:
+    if not is_valid_path(path):
         # TODO: Implement function handling error messages.
         return "Invalid Parameter."
-    real_path = pjoin(MEDIA_ROOT, valid_path[1:])
-    print real_path
+    real_path = build_real_path(path)
     params = {}
     params["command"] = "add_media"
     params["path"] = [real_path]
@@ -79,21 +104,14 @@ def player_status():
     return send_cmd(SOCKET_PATH, params)
 
 
-@app.route("/control/play", methods=["POST"])
+@app.route("/control/play")
 def play():
     """
-    Imediately play specified media in form of path.
+    Start to play.
     """
-    if "path" not in request.form:
-        return "Invalid Parameter."
-    path = request.form["path"]
-    valid_path = validate_path(path)
-    if valid_path is None:
-        return "Invalid Parameter."
-    return "Not Implemented."
     params = {}
     params["command"] = "play"
-    return ""
+    return send_cmd(SOCKET_PATH, params)
 
 
 @app.route("/control/stop")
