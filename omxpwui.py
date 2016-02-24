@@ -91,7 +91,8 @@ def enqueue():
     params = {}
     params["command"] = "add_media"
     params["path"] = [real_path]
-    return send_cmd(SOCKET_PATH, params)
+    res = send_cmd(SOCKET_PATH, params)
+    return res
 
 
 @app.route("/control/status")
