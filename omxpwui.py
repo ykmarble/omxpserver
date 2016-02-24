@@ -9,7 +9,7 @@ import urllib
 
 
 DEBUG = True
-MEDIA_ROOT = "/media/share/"
+MEDIA_ROOT = "/media/share/exports"
 
 app = Flask(__name__)
 pjoin = os.path.join
@@ -51,7 +51,7 @@ def show_content(dirpath=""):
     if not is_valid_path(fake_path):
         return "Invalid Parameter."
     real_path = build_real_path(fake_path)
-    dirs = ["../"] + os.listdir(real_path)
+    dirs = ["../"] + sorted(os.listdir(real_path))
     itemlist = []
     dirlist = []
     for item in dirs:
