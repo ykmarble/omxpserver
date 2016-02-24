@@ -1,0 +1,29 @@
+omxpserver read command through UNIX domain socket.
+Commands must be JSON format with content length ahead of json data.
+
+`command` field must be required.
+That means execute which `command`.
+Command list will follow and each content describes additional or required parameters.
+
+status :
+    Get omxpserver info, which includes playing media name and path etc.
+play:
+    Start playing, or pause when player state is already playing.
+stop:
+    Stop playing, with consuming current media.
+pause:
+    Pause playing, without consuming current media or playing cursor.
+    If player status is already pause, restart playing media.
+omx:
+    Passthrough command to omxplayer.
+    @args field will be passed.
+add_media:
+    Add medium at @path to play queue.
+    @path field, which has iterable data, is required.
+add_playlist:
+    Add medium written at @path to play queue.
+    @path field, which has iterable data, is required.
+list_queue:
+    List queue.
+quit:
+    Quit omxpserver.

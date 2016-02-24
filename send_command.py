@@ -8,7 +8,7 @@ import argparse
 import json
 import sys
 from core.omxpsocket import SOCKET_PATH
-from core.utils import recieve_chunked_stream, send_chunked_stream
+from core.utils import send_cmd
 
 cmd_dict = {"status": lambda args: len(args)==0,
             "omx": lambda args: True,
@@ -25,15 +25,6 @@ command list
 status: print status
 omx: pass to omxplayer
 """
-
-def send_cmd(dst, data):
-    data_json = json.dumps(data)
-    soc = socket.socket(socket.AF_UNIX)
-    soc.connect(dst)
-    send_chunked_stream(soc, data_json)
-    res = recieve_chunked_stream(soc)
-    soc.close()
-    return res
 
 def main():
     parser = argparse.ArgumentParser(epilog=cmd_description)
