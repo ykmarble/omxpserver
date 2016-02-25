@@ -51,7 +51,9 @@ def show_content(dirpath=""):
     if not is_valid_path(fake_path):
         return "Invalid Parameter."
     real_path = build_real_path(fake_path)
-    dirs = ["../"] + sorted(os.listdir(real_path))
+    dirs = sorted(os.listdir(real_path))
+    if dirpath != "":
+        dirs = ["../"] + dirs
     itemlist = []
     dirlist = []
     for item in dirs:
