@@ -34,7 +34,7 @@
           {% for dir in dirlist %}
           <li class="direntry">
             <a href="{{ dir.href }}" class="list-button">
-              <i class="fa fa-folder-open-o"></i>
+              <i class="fa fa-folder-open-o fa-fw"></i>
               <span class="button-text">{{ dir.caption }}</span>
             </a>
           </li>
@@ -47,7 +47,10 @@
           {% for item in itemlist %}
           <li class="itementry">
             <span class="list-button">
-              <i class="fa fa-play"></i>
+              <div class="icon-container">
+                <i class="fa fa-play fa-fw regular-icon"></i>
+                <i class="fa fa-spinner fa-spin fa-fw loading-icon"></i>
+              </div>
               <span class="button-text">{{ item.caption }}</span>
             </span>
           </li>

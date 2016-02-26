@@ -57,6 +57,16 @@ textarea {
     padding: 0.2em 0;
 }
 
+.loading-icon {
+    display: none;
+}
+
+.icon-container{
+    display: inline-block;
+    height: 100%;
+    width: 2em;
+}
+
 .dirlist,
 .itemlist {
     margin: 0;
@@ -93,13 +103,25 @@ textarea {
     color: #000;
     text-decoration: none;
     display: block;
-    box-sizing: border-box;
     padding: 0.5em 1em;
     cursor: pointer;
 }
 
 .list-button:hover {
     text-decoration: underline;
+}
+
+.toast{
+    position: fixed;
+    bottom: 2em;
+    background: rgba(0,0,0,0.6);
+    color: #fff;
+    border-radius: 3px;
+    padding: 0.5em 1em;
+    border: none;
+    z-index: 100;
+    box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.2);
+    box-sizing: border-box;
 }
 
 /* ===== Initializr Styles ==================================================
@@ -193,6 +215,11 @@ nav a:hover {
     padding: 20px 0;
 }
 
+.toast {
+    font-size: 1em;
+    max-width: 300px;
+}
+
 /* ===============
     ALL: IE Fixes
    =============== */
@@ -243,6 +270,11 @@ nav a:hover {
 
     nav li:last-child a {
         margin-right: 0;
+    }
+
+    .toast {
+        font-size: 1em;
+        max-width: 412px;
     }
 
 /* ========================
@@ -297,6 +329,11 @@ nav a:hover {
         float: right;
         width: 28%;
     }
+
+    .toast {
+        font-size: 1.2em;
+        max-width: 692px;
+    }
 }
 
 @media only screen and (min-width: 1140px) {
@@ -308,6 +345,12 @@ nav a:hover {
     .wrapper {
         width: 1026px; /* 1140px - 10% for margins */
         margin: 0 auto;
+    }
+
+    .toast {
+        font-size: 1.2em;
+        bottom: 3em;
+        max-width: 1026px;
     }
 }
 
