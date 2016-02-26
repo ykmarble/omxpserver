@@ -28,22 +28,32 @@
 
     <div class="main-container">
       <div class="main wrapper clearfix">
-        <ul>
+        {% if dirlist %}
+        <h2>dirs</h2>
+        <ul class="dirlist">
           {% for dir in dirlist %}
-            <li>
+          <li class="direntry">
+            <a href="{{ dir.href }}" class="list-button">
               <i class="fa fa-folder-open-o"></i>
-              <a href="{{ dir.href }}">{{ dir.caption }}</a>
-            </li>
+              <span class="button-text">{{ dir.caption }}</span>
+            </a>
+          </li>
           {% endfor %}
         </ul>
-        <ul>
+        {% endif %}
+        {% if itemlist %}
+        <h2>media files</h2>
+        <ul class="itemlist">
           {% for item in itemlist %}
-            <li>
+          <li class="itementry">
+            <span class="list-button">
               <i class="fa fa-play"></i>
-              <a href="#{{ item.href }}" class="playable">{{ item.caption }}</a>
-            </li>
+              <span class="button-text">{{ item.caption }}</span>
+            </span>
+          </li>
           {% endfor %}
         </ul>
+        {% endif %}
       </div> <!-- #main -->
     </div> <!-- #main-container -->
 

@@ -24,7 +24,11 @@ hr {
 }
 
 li {
-    list-style-type: none
+    list-style-type: none;
+}
+
+i {
+    margin-right: 0.5em;
 }
 
 audio,
@@ -53,6 +57,50 @@ textarea {
     padding: 0.2em 0;
 }
 
+.dirlist,
+.itemlist {
+    margin: 0;
+    padding: 0;
+}
+
+.direntry,
+.itementry {
+    border-style: solid;
+    border-color: #ccc;
+    border-width: 0 1px 1px;
+
+}
+
+.direntry:first-child,
+.itementry:first-child {
+    border-width: 1px;
+    border-top-left-radius: 3px;
+    border-top-right-radius: 3px;
+}
+
+.direntry:last-child,
+.itementry:last-child {
+    border-bottom-left-radius: 3px;
+    border-bottom-right-radius: 3px;
+}
+
+.direntry:hover,
+.itementry:hover {
+    background-color: #eee;
+}
+
+.list-button {
+    color: #000;
+    text-decoration: none;
+    display: block;
+    box-sizing: border-box;
+    padding: 0.5em 1em;
+    cursor: pointer;
+}
+
+.list-button:hover {
+    text-decoration: underline;
+}
 
 /* ===== Initializr Styles ==================================================
    Author: Jonathan Verrecchia - verekia.com/initializr/responsive-template
