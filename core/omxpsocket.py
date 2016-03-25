@@ -12,14 +12,22 @@ SOCKET_PATH = "/tmp/omxplayer.sock"
 
 
 class OMXPSocket(object):
-    '''Socket wrapper to recieve command from other processes.'''
+    """
+    Make a UNIX domain socket which recieves command of omxpserver from other processes.
+    """
 
     def __init__(self, command_listener, path=SOCKET_PATH):
+        """
+        @command_listener: Function which will be called if command is recieved.
+        @path: The path of UNIX domain socket.
+        """
         self.socket_path = path
         self.command_listener = command_listener
 
     def start(self):
-        '''Start reciever thread.'''
+        """
+        Start reciever thread.
+        """
         if os.path.exists(self.socket_path):
             os.unlink(self.socket_path)
         self.socket = socket.socket(socket.AF_UNIX)
@@ -32,6 +40,10 @@ class OMXPSocket(object):
         t.start()
 
     def mainloop(self):
+        """
+        The main loop of reciver thread.
+        This method will be called by start method.
+        """
         while True:
             csock, addr = self.socket.accept()
             try:
@@ -44,8 +56,8 @@ class OMXPSocket(object):
             try:
                 data = json.loads(rawdata)
             except ValueError:
-                print "Reciebed invalied data."
-                send_chunked_stream(csock, "Reciebed invalied data.")
+                print "Recieved invalied data."
+                send_chunked_stream(csock, "Recieved invalied data.")
                 csock.close()
                 continue
             try:
