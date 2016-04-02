@@ -6,6 +6,7 @@ from core.omxpsocket import SOCKET_PATH
 from core.utils import send_cmd
 import os
 import urllib
+import logging
 
 
 DEBUG = True

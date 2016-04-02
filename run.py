@@ -9,11 +9,14 @@ import sys
 import time
 import threading
 import subprocess
+import logging
 
 ROOT_PATH = os.path.dirname(sys.argv[0])
 PID_FILE_PATH = os.path.join(ROOT_PATH, 'omxpserver.pid')
 OMXP_PATH = '/usr/bin/omxplayer'
 OMXP_OPT = '-o local'
+
+logging.basicConfig(level=logging.INFO)
 
 def main():
     # parse argument

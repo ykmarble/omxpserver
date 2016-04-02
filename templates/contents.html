@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block main %}
+<div class="main wrapper clearfix">
+  {% if dirlist %}
+  <h2>dirs</h2>
+  <ul class="dirlist">
+    {% for dir in dirlist %}
+    <li class="direntry">
+      <a href="{{ dir.href }}" class="list-button">
+        <i class="fa fa-folder-open-o fa-fw"></i>
+        <span class="button-text">{{ dir.caption }}</span>
+      </a>
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+  {% if itemlist %}
+  <h2>media files</h2>
+  <ul class="itemlist">
+    {% for item in itemlist %}
+    <li class="itementry">
+      <span class="list-button">
+        <div class="icon-container">
+          <i class="fa fa-play fa-fw regular-icon"></i>
+          <i class="fa fa-spinner fa-spin fa-fw loading-icon"></i>
+        </div>
+        <span class="button-text">{{ item.caption }}</span>
+      </span>
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</div> <!-- #main -->
+{% endblock %}

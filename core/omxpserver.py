@@ -4,6 +4,7 @@
 import subprocess
 import os
 import threading
+import logging
 
 
 class OMXPSever(object):
@@ -20,6 +21,7 @@ class OMXPSever(object):
         self.destructer = lambda : None
         self.updating = threading.RLock()
         self.wake_run = threading.Event()
+        logging.info("Done omxpserver initialization.")
 
     def pop_playlist(self):
         """
@@ -39,6 +41,8 @@ class OMXPSever(object):
             media_paths += [l.strip() for l in f.readlines()]
         with self.updating:
             self.play_queue.extend(media_paths)
+        for i in media_paths:
+            logging.info("Add {} to queue.".format(i))
         return media_paths
 
     def add_media(self, media_path):
@@ -48,6 +52,7 @@ class OMXPSever(object):
         """
         with self.updating:
             self.play_queue.append(media_path)
+        logging.info("Add {} to queue.".format(media_path))
 
     def is_playing(self):
         """
@@ -62,6 +67,7 @@ class OMXPSever(object):
         @send_res: Function which will be called with message string from omxpserver if the command have run.
         @data: Dictionary which must contains "command" field.
         """
+        logging.info("Recieved command, {}.".format(str(data)))
         command = data["command"]
         res = ""
         if command == "status":
@@ -112,6 +118,7 @@ class OMXPSever(object):
         """
         Start server.
         """
+        logging.info("Start server.")
         while self.wake_run.wait():
             self.updating.acquire()
             if self.is_playing():
@@ -134,6 +141,7 @@ class OMXPSever(object):
                     self.pause()
                 else:
                     self.playing_status = "play"
+            logging.info("Changed player status={} in play.".format(self.playing_status))
             return
         with self.updating:
             r, w = os.pipe()
@@ -150,6 +158,7 @@ class OMXPSever(object):
             t.daemon = True
             self.playing_status = "play"
             self.playing_media_path = media_path
+            logging.info("Start playing media.")
 
     def stop(self):
         """
@@ -162,6 +171,7 @@ class OMXPSever(object):
             self.playing_media_path = ""
             self.omxp_process = None
             self.omxp_pipe = None
+            logging.info("Player stopped.")
 
     def pause(self):
         """
@@ -175,3 +185,4 @@ class OMXPSever(object):
                 self.playing_status = "pause"
             else:
                 self.playing_status == "play"
+        logging.info("Changed player status={} in pause.".format(self.playing_status))
