@@ -18,8 +18,17 @@
   {% if itemlist %}
   <h2>media files</h2>
   <ul class="itemlist">
+    <li class="itementry has-loading-icon add-all-entry">
+      <span class="list-button">
+        <div class="icon-container">
+          <i class="fa fa-play fa-fw regular-icon"></i>
+          <i class="fa fa-spinner fa-spin fa-fw loading-icon"></i>
+        </div>
+        <span class="button-text">Add all</span>
+      </span>
+    </li>
     {% for item in itemlist %}
-    <li class="itementry playable">
+    <li class="itementry has-loading-icon playable">
       <span class="list-button">
         <div class="icon-container">
           <i class="fa fa-play fa-fw regular-icon"></i>

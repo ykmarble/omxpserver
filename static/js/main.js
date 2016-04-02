@@ -1,6 +1,11 @@
 function getfakelocation() {
-    loc = decodeURIComponent(location.pathname)
-    return loc.replace("/contents", "")
+    loc = decodeURIComponent(location.pathname);
+    return loc.replace("/contents", "");
+}
+
+function revert_loading_icon(dom) {
+    $(dom).find(".regular-icon").css("display", "inline-block");
+    $(dom).find(".loading-icon").css("display", "none");
 }
 
 $(".playable").click(function () {
@@ -8,14 +13,30 @@ $(".playable").click(function () {
     $.post("/queue/add",
            {path: getfakelocation() + $(this).find(".button-text").text()},
            function (data) {
-               $(clicked_dom).find(".regular-icon").css("display", "inline-block");
-               $(clicked_dom).find(".loading-icon").css("display", "none");
+               revert_loading_icon(clicked_dom);
                var toast = new Toast();
-               toast.show(data)
-           })
+               toast.show(data);
+           });
+});
+
+$(".add-all-entry").click(function () {
+    var clicked_dom = this;
+    var playlist = $(this).nextAll(".playable");
+    var num_of_medium = playlist.length;
+    playlist.each(function (index) {
+        $.post("/queue/add",
+               {path: getfakelocation() + $(this).find(".button-text").text()},
+               function(data) {
+                   var toast = new Toast();
+                   toast.show(data);
+                   if (index+1 == num_of_medium) {
+                       revert_loading_icon(clicked_dom);
+                   }
+               });
+    });
 })
 
-$(".playable").click(function () {
+$(".has-loading-icon").click(function () {
     $(this).find(".regular-icon").css("display", "none");
     $(this).find(".loading-icon").css("display", "inline-block");
 })
