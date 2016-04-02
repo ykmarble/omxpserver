@@ -4,6 +4,7 @@
 import subprocess
 import os
 import threading
+import json
 import logging
 
 
@@ -64,12 +65,12 @@ class OMXPSever(object):
     def consume_command(self, send_res, data):
         """
         Command based controller of omxpserver.
-        @send_res: Function which will be called with message string from omxpserver if the command have run.
+        @send_res: Callback function, which takes the response as argument.
         @data: Dictionary which must contains "command" field.
         """
         logging.info("Recieved command, {}.".format(str(data)))
         command = data["command"]
-        res = ""
+        res = {}
         if command == "status":
             pass
         elif command == "play":
@@ -78,6 +79,9 @@ class OMXPSever(object):
             self.stop()
         elif command == "pause":
             self.pause()
+        elif command == "next":
+            self.stop()
+            self.play()
         elif command == "omx":
             os.write(self.omxp_pipe, " ".join(data["args"]))
         elif command == "add_media":
@@ -85,33 +89,39 @@ class OMXPSever(object):
             valid_paths = [i.encode("utf-8") if isinstance(i, unicode) else i for i in valid_paths]
             for p in valid_paths:
                 self.add_media(p)
-            res = ""
-            res = "Add media:\n"
-            res += "\n".join(valid_paths)
+            res["succeeded"] = True
+            res["msg"] = "Add media: " + "\n".join(valid_paths)
+            res["path"] = valid_paths
         elif command == "add_playlist":
             valid_paths = [i for i in data["path"] if os.path.isfile(i)]
             valid_paths = [i.encode("utf-8") if isinstance(i, unicode) else i for i in valid_paths]
             add_medium = []
             for p in valid_paths:
                 add_medium.extend(self.add_playlist(p))
-            res = ""
-            res = "Add media:\n"
-            res += "\n".join(add_medium)
+            res["succeeded"] = True
+            res["msg"] = "Add media: " + "\n".join(add_medium)
+            res["path"] = valid_paths
         elif command == "list_queue":
             with self.updating:
-                res = "\n".join(self.play_queue)
+                res["succeeded"] = True
+                res["items"] = self.play_queue
         elif command == "quit":
-            send_res("See you")
+            res["succeeded"] = True
+            res["msg"] = "See you"
+            send_res(json.dumps(res))
             self.stop()
             self.destructer()
         else:
             os.write(self.omxp_pipe, command)
-        if res == "":
+        if res == {}:
             with self.updating:
-                res = "is_playing: {}\n".format(self.is_playing()) \
-                    + "status: {}\n".format(self.playing_status) \
-                    + "media_path: {}".format(self.playing_media_path)
-        send_res(res)
+                res["succeeded"] = True
+                res["msg"] = "is_playing: {}\n".format(self.is_playing()) \
+                             + "status: {}\n".format(self.playing_status) \
+                             + "media_path: {}".format(self.playing_media_path)
+                res["status"] = self.playing_status
+                res["current_media"] = self.playing_media_path
+        send_res(json.dumps(res))
         self.wake_run.set()
 
     def run(self):

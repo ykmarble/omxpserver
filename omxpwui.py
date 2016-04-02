@@ -1,11 +1,14 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 
-from flask import Flask, request, render_template
+from flask import Flask, request, render_template, redirect
 from core.omxpsocket import SOCKET_PATH
+from run import PID_FILE_PATH
 from core.utils import send_cmd
+import subprocess
 import os
 import urllib
+import json
 import logging
 
 
@@ -37,9 +40,43 @@ def is_valid_media(real_path):
     """
     Check the file indecated by path is supported or not.
     """
-    exts = ["mp3", "wav", "aac", "m4a", "m2ts", "ts", "mp4"]
+    exts = ["mp3", "wav", "aac", "m4a", "m2ts", "ts", "mp4", "mkv"]
     return real_path.split(".")[-1] in exts
 
+
+def omxpserver_is_runnnig():
+    """
+    Check if omxpserver is already running or not.
+    """
+    return (os.path.exists(PID_FILE_PATH) and
+            subprocess.call(["pgrep", "-F", PID_FILE_PATH]) == 0)
+
+
+def get_omxpserver_status():
+    """
+    Get status of omxpserver.
+    """
+    params = {}
+    params["command"] = "status"
+    return json.loads(send_cmd(SOCKET_PATH, params))
+
+
+@app.route("/")
+def show_control_panel():
+    running = omxpserver_is_runnnig()
+    status = ""
+    current = ""
+    queue = []
+    if running:
+        res = get_omxpserver_status()
+        status = res["status"]
+        current = res["current_media"]
+        queue = list_queue()
+    return render_template("control.html",
+                           server_is_running=str(running),
+                           server_status=status,
+                           current_media=current,
+                           queue=queue)
 
 @app.route("/contents/")
 @app.route("/contents/<path:dirpath>/")
@@ -64,7 +101,7 @@ def show_content(dirpath=""):
             dirlist.append({"href": "/contents"+item_fake_path, "caption": item})
         elif is_valid_media(item_real_path):
             itemlist.append({"href": item_fake_path, "caption": item})
-    return render_template("base.html", title=fake_path,
+    return render_template("contents.html", title=fake_path,
                            itemlist=itemlist, dirlist=dirlist)
 
 
@@ -76,7 +113,7 @@ def list_queue():
     """
     params = {}
     params["command"] = "list_queue"
-    return send_cmd(SOCKET_PATH, params)
+    return json.loads(send_cmd(SOCKET_PATH, params))["items"]
 
 
 @app.route("/queue/add", methods=["POST"])
@@ -95,18 +132,8 @@ def enqueue():
     params = {}
     params["command"] = "add_media"
     params["path"] = [real_path]
-    res = send_cmd(SOCKET_PATH, params)
-    return res
-
-
-@app.route("/control/status")
-def player_status():
-    """
-    Inquire status of omxpserver and return it.
-    """
-    params = {}
-    params["command"] = "status"
-    return send_cmd(SOCKET_PATH, params)
+    res = json.loads(send_cmd(SOCKET_PATH, params))
+    return res["msg"]
 
 
 @app.route("/control/play")
@@ -116,7 +143,8 @@ def play():
     """
     params = {}
     params["command"] = "play"
-    return send_cmd(SOCKET_PATH, params)
+    send_cmd(SOCKET_PATH, params)
+    return redirect("/")
 
 
 @app.route("/control/stop")
@@ -126,7 +154,8 @@ def stop():
     """
     params = {}
     params["command"] = "stop"
-    return send_cmd(SOCKET_PATH, params)
+    send_cmd(SOCKET_PATH, params)
+    return redirect("/")
 
 
 @app.route("/control/pause", methods=["GET", "POST"])
@@ -139,8 +168,20 @@ def pause():
     if request.method == "GET":
         params = {}
         params["command"] = "pause"
-        return send_cmd(SOCKET_PATH, params)
+        send_cmd(SOCKET_PATH, params)
+        return redirect("/")
     return "Not Implemented."
+
+@app.route("/control/next")
+def next_media():
+    """
+    Stop current playing media and play next media in the queue.
+    This function samely works like calling `stop` and `play` function.
+    """
+    params = {}
+    params["command"] = "next"
+    send_cmd(SOCKET_PATH, params)
+    return redirect("/")
 
 
 if __name__ == '__main__':

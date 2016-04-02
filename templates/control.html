@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}control{% endblock %}
+{% block main %}
+<div class="main wrapper clearfix">
+  <ul>
+    <li>omxpserver: {{ server_is_running }}</li>
+    {% if server_is_running %}
+    <li>status: {{ server_status }}</li>
+    <li>current media: {{current_media}}</li>
+    {% endif %}
+  </ul>
+  <ul>
+    <li><a href="control/play">play</a></li>
+    <li><a href="control/stop">stop</a></li>
+    <li><a href="control/next">next</a></li>
+    <li><a href="control/wakeup">start omxpserver</a></li>
+    <li><a href="control/kill">kill omxpserver</a></li>
+  </ul>
+  {% if queue %}
+  <h2>queue</h2>
+  <ul class="itemlist">
+    {% for item in queue %}
+    <li class="itementry">
+      <span class="list-button">
+        <span class="button-text">{{ item }}</span>
+      </span>
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</div> <!-- #main -->
+{% endblock %}

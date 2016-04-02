@@ -3,7 +3,7 @@ function getfakelocation() {
     return loc.replace("/contents", "")
 }
 
-$(".itementry").click(function () {
+$(".playable").click(function () {
     var clicked_dom = this;
     $.post("/queue/add",
            {path: getfakelocation() + $(this).find(".button-text").text()},
@@ -15,7 +15,7 @@ $(".itementry").click(function () {
            })
 })
 
-$(".list-button").click(function () {
+$(".playable").click(function () {
     $(this).find(".regular-icon").css("display", "none");
     $(this).find(".loading-icon").css("display", "inline-block");
 })
